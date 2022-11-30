@@ -3,15 +3,24 @@ import pandas as pd
 from datetime import datetime
 import numpy as np
 import time
+import gspread
+
+sa = gspread.service_account("service_account.json")
+sh = sa.open("finanzen")
+
+aus = sh.worksheet("Ausgaben")
+aus = pd.DataFrame(aus.get_all_records())
+
+ein = sh.worksheet("Ausgaben")
+ein = pd.DataFrame(ein.get_all_records())
+
 
 st.title("Finanzen")
 
-# path = "/home/lb21/Server/Mac/finanzen.xlsx"
-path = "/Users/laurin/Library/CloudStorage/GoogleDrive-laurin@biermann-home.de/Meine Ablage/Mac/finanzen.xlsx"
+st.write(aus.tail(10))
 
-aus = pd.read_excel(path, sheet_name = "Ausgaben")
-ein = pd.read_excel(path, sheet_name = "Einnahmen")
-
+aus["Betrag"] = aus["Betrag"].div(100)
+ein["Betrag"] = ein["Betrag"].div(100)
 
 aus["Datum"] = pd.to_datetime(aus["Datum"], format = "%d.%m.%Y", errors = "coerce")
 ein["Datum"] = pd.to_datetime(ein["Datum"], format = "%d.%m.%Y", errors = "coerce")
