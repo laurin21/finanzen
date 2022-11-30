@@ -5,3 +5,4 @@ numpy
 gspread
 PyOpenSSL
 oauth2client
+matplotlib
