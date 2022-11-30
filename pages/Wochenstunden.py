@@ -16,6 +16,12 @@ df["Stunden"] = df["Stunden"].div(100)
 
 st.title("Wochenstunden")
 
-st.write(df)
+avg_lst = []
 
-st.line_chart(df["Stunden"])
+for i in range(len(df["Stunden"])):
+	current_avg = (df["Stunden"][:i].sum()/i)
+	avg_lst.append(current_avg)
+
+df["Average"] = avg_lst
+
+st.line_chart(df[["Stunden", "Average"]])
