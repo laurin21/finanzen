@@ -11,10 +11,10 @@ sh = sa.open("wochenstunden")
 df = sh.worksheet("Tabelle1")
 df = pd.DataFrame(df.get_all_records())
 
-
+df["Stunden"] = df["Stunden"].map(float)
 
 st.title("Wochenstunden")
 
 st.write(df)
 
-st.line_chart(df)
+st.line_chart(df["Stunden"])
