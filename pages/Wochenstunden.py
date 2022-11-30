@@ -9,7 +9,7 @@ sa = gspread.service_account("service_account.json")
 sh = sa.open("wochenstunden")
 
 df = sh.worksheet("Tabelle1")
-df = pd.DataFrame(aus.get_all_records())
+df = pd.DataFrame(df.get_all_records())
 
 
 
