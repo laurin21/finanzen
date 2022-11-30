@@ -12,6 +12,7 @@ df = sh.worksheet("Tabelle1")
 df = pd.DataFrame(df.get_all_records())
 
 df["Stunden"] = df["Stunden"].map(float)
+df["Stunden"] = df["Stunden"].div(100)
 
 st.title("Wochenstunden")
 
