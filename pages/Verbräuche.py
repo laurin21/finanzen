@@ -11,7 +11,7 @@ sh = sa.open("verbraeuche_wg")
 strom = sh.worksheet("Strom")
 strom = pd.DataFrame(strom.get_all_records())
 
-gas = sh.worksheet("Ausgaben")
+gas = sh.worksheet("Gas")
 gas = pd.DataFrame(strom.get_all_records())
 
 
