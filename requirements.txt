@@ -3,3 +3,5 @@ pandas
 datetime
 numpy
 gspread
+PyOpenSSL
+oauth2client
