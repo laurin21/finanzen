@@ -22,20 +22,22 @@ for i in range(len(df["Stunden"])):
 
 df["Average"] = avg_lst
 
+sum_h = df["Stunden"].sum()
+
 average = avg_lst[-1]
 average_money = round(((average * 14) - (average * 14 * 0.036)) * 4.33, 3)
+
+sum_money = round(((sum_h * 14) - (sum_h * 14 * 0.036)) * 4.33, 3)
 
 avg_soll = 7.42
 delta = round(average - avg_soll, 3)
 
-st.title("Wochenstunden")
-
-sum_h = df["Stunden"].sum()
-
-rente = round(sum_h * 14 * 0.036, 3)
+rente = round(sum_h * 14 * 0.036, 2)
 
 
 ####
+
+st.title("Wochenstunden")
 
 st.line_chart(df[["Stunden", "Average"]])
 
@@ -46,5 +48,7 @@ st.write(f"Delta zum Mindestdurchschnitt: {delta}h")
 st.write(f"Durchschnittliche Stundenanzahl pro Woche: {average}h")
 
 st.write(f"Stunden insgesamt: {sum_h}h")
+
+st.write(f"Gesamt verdient seit Jan. 2022: {sum_money}€")
 
 st.write(f"Eingezahlt in Rentenkasse: {rente}€")
