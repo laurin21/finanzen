@@ -14,10 +14,6 @@ df = pd.DataFrame(df.get_all_records())
 df["Stunden"] = df["Stunden"].map(float)
 df["Stunden"] = df["Stunden"].div(100)
 
-
-average = avg_lst[-1]
-average_money = round(((average * 14) - (average * 14 * 0.036)) * 4.33, 3)
-
 avg_lst = []
 
 for i in range(len(df["Stunden"])):
@@ -25,6 +21,9 @@ for i in range(len(df["Stunden"])):
 	avg_lst.append(current_avg)
 
 df["Average"] = avg_lst
+
+average = avg_lst[-1]
+average_money = round(((average * 14) - (average * 14 * 0.036)) * 4.33, 3)
 
 avg_soll = 7.42
 delta = round(average - avg_soll, 3)
