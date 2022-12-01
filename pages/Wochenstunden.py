@@ -28,5 +28,12 @@ st.line_chart(df[["Stunden", "Average"]])
 
 
 average = avg_lst[-1]
-average_money = (average * 14) - (average * 14 * 0.036)
-st.write(f"Durchschnittlicher Verdienst pro Monat: {average_money}")
+average_money = ((average * 14) - (average * 14 * 0.036)) * 4.33
+st.write(f"Durchschnittlicher Verdienst pro Monat: {average_money}€")
+
+avg_soll = 7.42
+delta = average - avg_soll
+
+st.write(f"Delta zum Mindestdurchschnitt: {delta}h")
+
+
