@@ -30,7 +30,9 @@ delta = round(average - avg_soll, 3)
 
 st.title("Wochenstunden")
 
-sum_h = df["Stunden].sum()
+sum_h = df["Stunden"].sum()
+
+rente = round(sum_h * 14 * 0.036, 3)
 
 
 ####
@@ -43,4 +45,6 @@ st.write(f"Delta zum Mindestdurchschnitt: {delta}h")
 
 st.write(f"Durchschnittliche Stundenanzahl pro Woche: {average}h")
 
-st.write(f"Stunden insgesamt: {sum_h}h"
+st.write(f"Stunden insgesamt: {sum_h}h")
+
+st.write(f"Eingezahlt in Rentenkasse: {rente}€")
