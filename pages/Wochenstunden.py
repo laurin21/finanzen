@@ -14,7 +14,9 @@ df = pd.DataFrame(df.get_all_records())
 df["Stunden"] = df["Stunden"].map(float)
 df["Stunden"] = df["Stunden"].div(100)
 
-st.title("Wochenstunden")
+
+average = avg_lst[-1]
+average_money = round(((average * 14) - (average * 14 * 0.036)) * 4.33, 3)
 
 avg_lst = []
 
@@ -24,16 +26,21 @@ for i in range(len(df["Stunden"])):
 
 df["Average"] = avg_lst
 
+avg_soll = 7.42
+delta = round(average - avg_soll, 3)
+
+st.title("Wochenstunden")
+
+
+
+####
+
 st.line_chart(df[["Stunden", "Average"]])
 
-
-average = avg_lst[-1]
-average_money = round(((average * 14) - (average * 14 * 0.036)) * 4.33, 2)
 st.write(f"Durchschnittlicher Verdienst pro Monat: {average_money}€")
 
-avg_soll = 7.42
-delta = average - avg_soll
-
 st.write(f"Delta zum Mindestdurchschnitt: {delta}h")
+
+st.write(f"Durchschnittliche Stundenanzahl pro Woche: {average}h")
 
 
