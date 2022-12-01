@@ -25,3 +25,8 @@ for i in range(len(df["Stunden"])):
 df["Average"] = avg_lst
 
 st.line_chart(df[["Stunden", "Average"]])
+
+
+average = avg_lst[-1]
+average_money = (average * 14) - (average * 14 * 0.036)
+st.write(f"Durchschnittlicher Verdienst pro Monat: {average_money}")
