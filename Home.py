@@ -6,23 +6,21 @@ import time
 import gspread
 
 
-st.title("Home")
+st.title("Life 2.1")
 
 finanzen, wochenstunden, investment = st.tabs(["Finanzen", "Wochenstunden", "Investment"])
 
 with finanzen:
-	sa = gspread.service_account("service_account.json")
-	sh = sa.open("finanzen")
-
-	aus = sh.worksheet("Ausgaben")
-	aus = pd.DataFrame(aus.get_all_records())
-
-	ein = sh.worksheet("Ausgaben")
-	ein = pd.DataFrame(ein.get_all_records())
-
+	##### TITEL #####
 	st.title("Finanzen")
 
-	st.write(aus.tail(10))
+	#### DATA IMPORT ####
+	sa = gspread.service_account("service_account.json")
+	sh = sa.open("finanzen")
+	aus = sh.worksheet("Ausgaben")
+	aus = pd.DataFrame(aus.get_all_records())
+	ein = sh.worksheet("Ausgaben")
+	ein = pd.DataFrame(ein.get_all_records())
 
 	aus["Betrag"] = aus["Betrag"].div(100)
 	ein["Betrag"] = ein["Betrag"].div(100)
@@ -30,58 +28,84 @@ with finanzen:
 	aus["Datum"] = pd.to_datetime(aus["Datum"], format = "%d.%m.%Y", errors = "coerce")
 	ein["Datum"] = pd.to_datetime(ein["Datum"], format = "%d.%m.%Y", errors = "coerce")
 
-
 	aus_months = aus.groupby(aus.Datum.dt.month)["Betrag"].sum()
 	aus_cat = aus.groupby("Kategorie")["Betrag"].sum()
 	ein_months = aus.groupby(aus.Datum.dt.month)["Betrag"].sum()
 	ein_cat = ein.groupby("Kategorie")["Betrag"].sum()
 
-	start = st.slider("Start", min_value = 1, max_value = 12, value = 1)
-	end = st.slider("End", min_value = 1, max_value = 12, value = 12)
+	#### ÜBERSICHT #####
+	st.subheader("Übersicht")
+	period = st.slider(label = "Zeitraum", min_value = 1, max_value = len(aus_months), value = [1,len(aus_months)])
+	
+	aus_tab, ein_tab = st.tabs(["Ausgaben", "Einnahmen"])
+	with aus_tab:
+		st.line_chart(aus_months[period[0]:period[1]])
+	with ein_tab:
+		st.line_chart(ein_months[period[0]:period[1]])
 
-	st.line_chart(aus_months[start:end])
-	st.line_chart(ein_months)
+	#### KATEGORIEN ####
+	st.subheader("Kategorien")
 
-	aus_categories = ["Einkauf", "Essen", "Uni", "Luna", "Verschiedenes", "Freizeit", "Menschen", "Transport", "Urlaub", "Sport", "Kleidung", "Wohnung"]
+	aus_tab, ein_tab = st.tabs(["Ausgaben", "Einnahmen"])
+	with aus_tab:
+		aus_categories = ["Einkauf", "Essen", "Uni", "Luna", "Verschiedenes", "Freizeit", "Menschen", "Transport", "Urlaub", "Sport", "Kleidung", "Wohnung"]
+		aus_cat_selection = st.multiselect("Ausgaben Kategorie", options = aus_categories)
+		aus_selected = aus[aus["Kategorie"].isin(aus_cat_selection)]
+		aus_sum_selected = aus_selected["Betrag"].sum()
 
-	aus_cat_selection = st.selectbox("Ausgaben Kategorie", options = aus_categories)
+	with ein_tab:
+		ein_categories = ["Gehalt", "Taschengeld", "Verschiedenes"]
+		ein_cat_selection = st.multiselect("Ausgaben Kategorie", options = ein_categories)
+		ein_selected = ein[ein["Kategorie"].isin(ein_cat_selection)]
+		ein_sum_selected = ein_selected["Betrag"].sum()
 
-	aus_selected = aus[aus["Kategorie"] == aus_cat_selection]
-
-	sum_aus_selected = aus_selected["Betrag"].sum()
-
-	st.write(sum_aus_selected)
-	st.write(aus_selected)
-
-	st.write(aus)
-	st.write(aus_months)
-	st.write(ein)
-	st.write(ein_months)
 
 with wochenstunden:
+	##### TITEL #####
+	st.title("Wochenstunden")
+
+	##### DATA IMPORT #####
 	sa = gspread.service_account("service_account.json")
 	sh = sa.open("wochenstunden")
-
 	df = sh.worksheet("Tabelle1")
 	df = pd.DataFrame(df.get_all_records())
 
 	df["Stunden"] = df["Stunden"].map(float)
 	df["Stunden"] = df["Stunden"].div(100)
 
-	st.title("Wochenstunden")
-
+	##### AVERAGE #####
 	avg_lst = []
-
 	for i in range(len(df["Stunden"])):
 		current_avg = (df["Stunden"][:i].sum()/i)
 		avg_lst.append(current_avg)
+	df["Average"] = avg_lst	
+	average = avg_lst[-1]	
 
-	df["Average"] = avg_lst
+	##### FURTHER EDA #####
+	sum_h = df["Stunden"].sum()
+	average_money = round(((average * 14) - (average * 14 * 0.036)) * 4.33, 3)
+	sum_money = round(((sum_h * 14) - (sum_h * 14 * 0.036)) * 4.33, 3)
+	avg_soll = 7.42
+	delta = round(average - avg_soll, 3)
+	rente = round(sum_h * 14 * 0.036, 2)
 
+	##### LINE GRAPH ####
 	st.line_chart(df[["Stunden", "Average"]])
+
+	##### METRICS #####
+	col1, col2, col3 = st.columns(3)
+	with col1:
+		st.metric(label = "Ø € pro Monat", value = f"{round(average_money,2)}€")
+		st.metric(label = "∑ h", value = f"{round(sum_h,2)}h")
+	
+	with col2:
+		st.metric(label = "Δ zum Min-Ø", value = f"{round(delta,2)}h")
+		st.metric(label = "∑ € seit Jan. 2022", value = f"{round(sum_money,2)}€")
+	with col3:
+		st.metric(label = "Ø h pro Woche", value = f"{round(average,2)}h")
+		st.metric(label = "Eingezahlt in Rentenkasse", value =  f"{round(rente,2)}€")
 
 
 with investment:
 	st.title("Investments")
-	st.write("")
 	st.write("Work in progress")
