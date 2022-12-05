@@ -1,132 +1,330 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 import time
 import gspread
+import matplotlib.pyplot as plt
+
+#####################
+###### CONFIGS ######
+#####################
+
+st.set_page_config(
+    page_title="Engerieverbäuche",
+    page_icon="",
+    menu_items={}
+)
+
+rgb_background = "#0f1116"
 
 
-st.title("Life 2.1")
+###################
+###### TITEL ######
+###################
 
-finanzen, wochenstunden, investment = st.tabs(["Finanzen", "Wochenstunden", "Investment"])
-
-with finanzen:
-	##### TITEL #####
-	st.title("Finanzen")
-
-	#### DATA IMPORT ####
-	sa = gspread.service_account("service_account.json")
-	sh = sa.open("finanzen")
-	aus = sh.worksheet("Ausgaben")
-	aus = pd.DataFrame(aus.get_all_records())
-	ein = sh.worksheet("Ausgaben")
-	ein = pd.DataFrame(ein.get_all_records())
-
-	aus["Betrag"] = aus["Betrag"].div(100)
-	ein["Betrag"] = ein["Betrag"].div(100)
-
-	aus["Datum"] = pd.to_datetime(aus["Datum"], format = "%d.%m.%Y", errors = "coerce")
-	ein["Datum"] = pd.to_datetime(ein["Datum"], format = "%d.%m.%Y", errors = "coerce")
-
-	aus_months = aus.groupby(aus.Datum.dt.month)["Betrag"].sum()
-	aus_cat = aus.groupby("Kategorie")["Betrag"].sum()
-	ein_months = aus.groupby(aus.Datum.dt.month)["Betrag"].sum()
-	ein_cat = ein.groupby("Kategorie")["Betrag"].sum()
-
-	#### ÜBERSICHT #####
-	st.subheader("Übersicht")
-	period = st.slider(label = "Zeitraum", min_value = 1, max_value = len(aus_months), value = [1,len(aus_months)])
-	
-	aus_tab, ein_tab = st.tabs(["Ausgaben", "Einnahmen"])
-	with aus_tab:
-		st.line_chart(aus_months[period[0]:period[1]])
-	with ein_tab:
-		st.line_chart(ein_months[period[0]:period[1]])
-
-	st.write("")
-	st.markdown("---")
-	st.write("")
-
-	#### KATEGORIEN ####
-	st.subheader("Kategorien")
-
-	aus_tab, ein_tab = st.tabs(["Ausgaben", "Einnahmen"])
-
-	with aus_tab:
-		aus_categories = ["Einkauf", "Essen", "Uni", "Luna", "Verschiedenes", "Freizeit", "Menschen", "Transport", "Urlaub", "Sport", "Kleidung", "Wohnung"]
-		aus_default_categories= ["Einkauf", "Essen", "Uni", "Luna", "Verschiedenes", "Freizeit", "Menschen", "Transport", "Sport", "Kleidung"]
-		aus_cat_selection = st.multiselect("Ausgaben Kategorie", options = aus_categories, default = aus_default_categories)
-		st.bar_chart(aus_cat[aus_cat_selection])
-
-	with ein_tab:
-		ein_categories = ["Gehalt", "Taschengeld", "Verschiedenes"]
-		ein_cat_selection = st.multiselect("Einnahmen Kategorie", options = ein_categories)
-		st.bar_chart(ein_cat[ein_cat_selection])
-
-	st.write("")
-	st.markdown("---")
-	st.write("")
+st.title(f"Energieverbräuche")
+st.markdown("---")
 
 
-	#### GANZER DATENSATZ ####
-	see_data = st.expander('Ganzer Datensatz')
-	with see_data:
-		aus_tab, ein_tab = st.tabs(["Ausgaben", "Einnahmen"])
+##########################
+###### IMPORT DATEN ######
+##########################
 
-		with aus_tab:
-			st.markdown("##### Ausgaben")
-			st.dataframe(data=aus.reset_index(drop=True))
-		with ein_tab:
-			st.markdown("##### Einnahmen")
-			st.dataframe(data=ein.reset_index(drop=True))
+sa = gspread.service_account("service_account.json")
+sh = sa.open("verbraeuche_wg")
+
+gas = sh.worksheet("Gas")
+gas = pd.DataFrame(gas.get_all_records())
+gas["Datum"] = pd.to_datetime(gas["Datum"], format = "%d.%m.%Y", errors = "coerce")
+g_prices = sh.worksheet("Gas Abschlag")
+g_prices = pd.DataFrame(g_prices.get_all_records())
+g_prices["Datum"] = pd.to_datetime(g_prices["Datum"], format = "%d.%m.%Y", errors = "coerce")
+g_months = gas.groupby(gas.Datum.dt.month)["Gas"].sum()
+g_months = pd.DataFrame(g_months)
+month_lst= pd.date_range('2022-04-01', periods = len(g_months) , freq='1M')-pd.offsets.MonthBegin(1)
+month_lst = [date_obj.strftime('%m.%y') for date_obj in month_lst]
+g_months["Month"] = month_lst
+
+strom = sh.worksheet("Strom")
+strom = pd.DataFrame(strom.get_all_records())
+strom["Datum"] = pd.to_datetime(strom["Datum"], format = "%d.%m.%Y", errors = "coerce")
+s_prices = sh.worksheet("Strom Abschlag")
+s_prices = pd.DataFrame(s_prices.get_all_records())
+s_prices["Datum"] = pd.to_datetime(s_prices["Datum"], format = "%d.%m.%Y", errors = "coerce")
+s_months = strom.groupby(strom.Datum.dt.month)["Strom"].sum()
+s_months = pd.DataFrame(s_months)
+month_lst= pd.date_range('2022-04-01', periods = len(s_months) , freq='1M')-pd.offsets.MonthBegin(1)
+month_lst = [date_obj.strftime('%m.%y') for date_obj in month_lst]
+s_months["Month"] = month_lst
 
 
-with wochenstunden:
-	##### TITEL #####
-	st.title("Wochenstunden")
 
-	##### DATA IMPORT #####
-	sa = gspread.service_account("service_account.json")
-	sh = sa.open("wochenstunden")
-	df = sh.worksheet("Tabelle1")
-	df = pd.DataFrame(df.get_all_records())
+#######################################
+###### VERBRAUCH LETZTEN 30 TAGE ######
+#######################################
 
-	df["Stunden"] = df["Stunden"].map(float)
-	df["Stunden"] = df["Stunden"].div(100)
+st.subheader(f"Verbräuche letzten 30 Tage")
 
-	##### AVERAGE #####
-	avg_lst = []
-	for i in range(len(df["Stunden"])):
-		current_avg = (df["Stunden"][:i].sum()/i)
-		avg_lst.append(current_avg)
-	df["Average"] = avg_lst	
-	average = avg_lst[-1]	
+g_jetzt = gas["Datum"][len(gas["Datum"])-1]
+g_one_month_ago = g_jetzt - timedelta(days = 30)
+g_lm = (gas[gas["Datum"] > g_one_month_ago]).reset_index()
+g_first_lm = g_lm["Datum"][0]
+g_first_date = gas["Datum"][0]
+g_duration = (g_jetzt-g_first_lm).days
+g_consumption_lm = g_lm["Gas"][len(g_lm)-1] - g_lm["Gas"][0]
+g_consumption_lm = g_consumption_lm / g_duration * 30
+g_costs_lm =  round(((20.16333333 + g_consumption_lm *0.1596 * 10) / 100),2)
+g_costs_lm_pp = round(g_costs_lm / 3,2)
 
-	##### FURTHER EDA #####
-	sum_h = df["Stunden"].sum()
-	average_money = round(((average * 14) - (average * 14 * 0.036)) * 4.33, 3)
-	sum_money = round(((sum_h * 14) - (sum_h * 14 * 0.036)) * 4.33, 3)
-	avg_soll = 7.42
-	delta = round(average - avg_soll, 3)
-	rente = round(sum_h * 14 * 0.036, 2)
+s_jetzt = strom["Datum"][len(strom["Datum"])-1]
+s_one_month_ago = s_jetzt - timedelta(days = 30)
+s_lm = (strom[strom["Datum"] > s_one_month_ago]).reset_index()
+s_first_lm = s_lm["Datum"][0]
+s_first_date = strom["Datum"][0]
+s_duration = (s_jetzt-s_first_lm).days
+s_consumption_lm = s_lm["Strom"][len(s_lm)-1] - s_lm["Strom"][0]
+s_consumption_lm = s_consumption_lm / s_duration * 30
+s_costs_lm =  round(((8.85 + s_consumption_lm * 0.3985) / 100),2)
+s_costs_lm_pp = round(s_costs_lm / 3,2)
 
-	##### LINE GRAPH ####
-	st.line_chart(df[["Stunden", "Average"]])
+col1, col2 = st.columns(2)
 
-	##### METRICS #####
-	col1, col2, col3 = st.columns(3)
+with col1:
+	st.metric(label = "Gas", value = f"{g_costs_lm}€")
+	st.write(f"Pro Person: {g_costs_lm_pp}")
+
+with col2:
+	st.metric(label = "Strom", value =f"{s_costs_lm}€")
+	st.write(f"Pro Person: {s_costs_lm_pp}")
+
+st.write("")
+st.markdown("---")
+st.write("")
+
+
+########################################
+###### VERBRAUCH UND DURCHSCHNITT ######
+########################################
+
+st.subheader("Verbrauch und Durchschnitt")
+
+carrier = st.radio(
+    "Energieversorger auswählen:",
+    ('Gas', 'Strom'), key = "1")
+
+if carrier == "Gas":
+	energy = gas
+	energy_str = carrier
+	energy_months = g_months
+elif carrier == "Strom":
+	energy = strom
+	energy_str = carrier
+	energy_months = s_months
+
+avg_energy = []
+for i in range(len(energy[energy_str])):
+	current_avg = (energy[energy_str][:i].sum()/i)
+	avg_energy.append(current_avg)
+energy["Average"] = avg_energy
+if carrier == "Gas":
+	gas["Average"] = avg_energy
+elif carrier == "Strom":
+	strom["Average"] = avg_energy
+
+fig, ax = plt.subplots(figsize = (9,9))
+ax.plot(energy["Datum"], energy[energy_str])
+ax.plot(energy["Datum"], energy["Average"], c = "r")
+ax.spines["right"].set_visible(False)
+ax.spines["top"].set_visible(False)
+ax.spines['bottom'].set_color('white')
+ax.spines['left'].set_color('white')
+ax.tick_params(axis = "both", colors = "white")
+ax.set_xticklabels(labels = energy_months["Month"], rotation=90)
+fig.patch.set_facecolor(rgb_background)
+ax.set_facecolor(rgb_background)
+st.pyplot(fig)
+
+st.write("")
+st.markdown("---")
+st.write("")
+
+
+###############################
+###### KOSTEN SEIT START ######
+###############################
+
+st.subheader(f"Energiekosten seit Einzug")
+
+g_duration_lst = []
+for i in range(len(g_prices)-1):
+	g_duration = (g_prices["Datum"][i+1] - g_prices["Datum"][i]).days
+	g_duration_lst.append(g_duration)
+g_last_duration = (gas["Datum"][len(gas["Datum"])-1] - g_prices["Datum"][len(g_prices["Datum"])-1]).days
+g_duration_lst.append(g_last_duration)
+g_duration_total_d = (g_jetzt-g_first_date).days
+g_consumption_total = (gas["Gas"][len(gas)-1] - gas["Gas"][0]) / 100
+g_share_lst = []	
+for i in range(len(g_prices["Datum"])):
+	g_price_share = g_duration_lst[i] / g_duration_total_d
+	g_share_lst.append(g_price_share)
+g_price_share_lst = []
+for i in range(len(g_prices["Datum"])):
+	g_price_share = g_share_lst[i] * g_prices["Preis"][i] / 10000
+	g_price_share_lst.append(g_price_share)
+g_average_price = 0
+for i in range(len(g_price_share_lst)):
+	g_average_price += g_price_share_lst[i]
+g_base_price = 241.96 / 365 * g_duration_total_d
+g_average_total = round(((g_base_price + g_consumption_total * g_average_price * 10)),2)
+g_duration_total_m = g_duration_total_d / 30
+g_average_per_month = round(g_average_total / g_duration_total_m, 2)
+
+s_duration_lst = []
+for i in range(len(s_prices)-1):
+	s_duration = (s_prices["Datum"][i+1] - s_prices["Datum"][i]).days
+	s_duration_lst.append(s_duration)
+s_last_duration = (strom["Datum"][len(strom["Datum"])-1] - s_prices["Datum"][len(s_prices["Datum"])-1]).days
+s_duration_lst.append(s_last_duration)
+s_duration_total_d = (s_jetzt-s_first_date).days
+s_consumption_total = (strom["Strom"][len(strom)-1] - strom["Strom"][0]) / 100
+s_share_lst = []	
+for i in range(len(s_prices["Datum"])):
+	s_price_share = s_duration_lst[i] / s_duration_total_d
+	s_share_lst.append(s_price_share)
+s_price_share_lst = []
+for i in range(len(s_prices["Datum"])):
+	s_price_share = s_share_lst[i] * s_prices["Preis"][i] / 10000
+	s_price_share_lst.append(s_price_share)
+s_average_price = 0
+for i in range(len(s_price_share_lst)):
+	s_average_price += s_price_share_lst[i]
+s_base_price = 106.2 / 365 * s_duration_total_d
+s_average_total = round(((s_base_price + s_consumption_total * s_average_price)),2)
+s_duration_total_m = s_duration_total_d / 30
+s_average_per_month = round(s_average_total / s_duration_total_m, 2)
+
+col1, col2 = st.columns(2)
+
+with col1:
+	st.markdown("##### Gas")
+	st.write(f"Durchschnitssverbauch: {g_average_per_month}€ pro Monat")
+	st.write(f"Durchschnittlicher Preis: {round(g_average_price,4)}€ / kWh")
+	st.write(f"Gesamtkosten seit Einzug: {g_average_total}€")
+
+with col2:
+	st.markdown("##### Strom")
+	st.write(f"Durchschnitssverbauch: {s_average_per_month}€ pro Monat")
+	st.write(f"Durchschnittlicher Preis: {round(s_average_price,4)}€ / kWh")
+	st.write(f"Gesamtkosten seit Einzug: {s_average_total}€")
+
+st.write("")
+st.markdown("---")
+st.write("")
+
+
+#################################
+###### VERBRAUCH PRO MONAT ######
+#################################
+
+st.subheader(f"Verbräuche pro Monat")
+
+carrier2 = st.radio(
+    "Energieversorger auswählen:",
+    ('Gas', 'Strom'), key = "2")
+
+if carrier2 == "Gas":
+	energy = gas
+	energy_str = carrier2
+	energy_months = g_months
+elif carrier2 == "Strom":
+	energy = strom
+	energy_str = carrier2
+	energy_months = s_months
+
+st.bar_chart(energy_months[energy_str])
+
+st.write("")
+st.markdown("---")
+st.write("")
+
+
+##########################################
+###### ZÄHLERSTÄNDE LETZTEN 30 TAGE ######
+##########################################
+
+st.subheader("Zählerstände der letzten 30 Tage")
+
+col1, col2 = st.columns(2)
+
+with col1:
+	st.markdown("##### Gas")
+	st.table(g_lm[["Datum", "Gas"]])
+
+with col2:
+	st.markdown("##### Strom")
+	st.table(s_lm[["Datum", "Strom"]])
+
+st.write("")
+st.markdown("---")
+st.write("")
+
+
+##############################
+###### ALLGEMEINE STATS ######
+##############################
+
+st.subheader("Allgemeine Stats")
+
+first_october = "2022-10-01"
+time_format = "%Y-%m-%d"
+first_october = datetime.strptime(first_october, time_format)
+today = datetime.now()
+days_since_move = (today - energy["Datum"][0]).days
+month_since_move = days_since_move / 30
+days_since_anna = (today - first_october).days
+month_since_anna = days_since_anna / 30
+
+st.write(f"Tage seit Einzug: {days_since_move}")
+st.write(f"Monate seit Einzug: {round(month_since_move,1)}")
+st.write(f"Tage seit Annas Einzug: {days_since_anna}")
+st.write(f"Monate seit Annas Einzug: {round(month_since_anna,1)}")
+
+st.write("")
+st.markdown("---")
+st.write("")
+
+
+##############################
+###### GANZER DATENSATZ ######
+##############################
+
+see_data = st.expander('Ganzer Datensatz')
+with see_data:
+	col1, col2 = st.columns(2)
+
 	with col1:
-		st.metric(label = "Ø € pro Monat", value = f"{round(average_money,2)}€")
-		st.metric(label = "∑ h", value = f"{round(sum_h,2)}h")
-	
+		st.markdown("##### Gas")
+		st.dataframe(data=gas[["Datum", "Gas"]].reset_index(drop=True))
+
 	with col2:
-		st.metric(label = "Δ zum Min-Ø", value = f"{round(delta,2)}h")
-		st.metric(label = "∑ € seit Jan. 2022", value = f"{round(sum_money,2)}€")
-	with col3:
-		st.metric(label = "Ø h pro Woche", value = f"{round(average,2)}h")
-		st.metric(label = "Eingezahlt in Rentenkasse", value =  f"{round(rente,2)}€")
+		st.markdown("##### Strom")
+		st.dataframe(data=strom[["Datum", "Strom"]].reset_index(drop=True))
 
+##########################
+###### EXPERIMENTAL ######
+##########################
 
-with investment:
-	st.title("Investments")
-	st.write("Work in progress")
+st.write("")
+st.markdown("---")
+st.write("")
+
+see_camera = st.expander('Cheese! 📸')
+with see_camera:
+	picture = st.camera_input(" ")
+
+if picture:
+	file_name = f"./pictures/{datetime.now()}.jpg"
+	with open (file_name,'wb') as file:
+		file.write(picture.getbuffer())
+	st.success("Tipptopp")
