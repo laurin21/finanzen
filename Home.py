@@ -43,21 +43,42 @@ with finanzen:
 	with ein_tab:
 		st.line_chart(ein_months[period[0]:period[1]])
 
+	st.write("")
+	st.markdown("---")
+	st.write("")
+
 	#### KATEGORIEN ####
 	st.subheader("Kategorien")
 
 	aus_tab, ein_tab = st.tabs(["Ausgaben", "Einnahmen"])
+
 	with aus_tab:
 		aus_categories = ["Einkauf", "Essen", "Uni", "Luna", "Verschiedenes", "Freizeit", "Menschen", "Transport", "Urlaub", "Sport", "Kleidung", "Wohnung"]
-		aus_cat_selection = st.multiselect("Ausgaben Kategorie", options = aus_categories)
-		aus_selected = aus[aus["Kategorie"].isin(aus_cat_selection)]
-		aus_sum_selected = aus_selected["Betrag"].sum()
+		aus_default_categories= ["Einkauf", "Essen", "Uni", "Luna", "Verschiedenes", "Freizeit", "Menschen", "Transport", "Sport", "Kleidung"]
+		aus_cat_selection = st.multiselect("Ausgaben Kategorie", options = aus_categories, default = aus_default_categories)
+		st.bar_chart(aus_cat[aus_cat_selection])
 
 	with ein_tab:
 		ein_categories = ["Gehalt", "Taschengeld", "Verschiedenes"]
-		ein_cat_selection = st.multiselect("Ausgaben Kategorie", options = ein_categories)
-		ein_selected = ein[ein["Kategorie"].isin(ein_cat_selection)]
-		ein_sum_selected = ein_selected["Betrag"].sum()
+		ein_cat_selection = st.multiselect("Einnahmen Kategorie", options = ein_categories)
+		st.bar_chart(ein_cat[ein_cat_selection])
+
+	st.write("")
+	st.markdown("---")
+	st.write("")
+
+
+	#### GANZER DATENSATZ ####
+	see_data = st.expander('Ganzer Datensatz')
+	with see_data:
+		aus_tab, ein_tab = st.tabs(["Ausgaben", "Einnahmen"])
+
+		with aus_tab:
+			st.markdown("##### Ausgaben")
+			st.dataframe(data=aus.reset_index(drop=True))
+		with ein_tab:
+			st.markdown("##### Einnahmen")
+			st.dataframe(data=ein.reset_index(drop=True))
 
 
 with wochenstunden:
