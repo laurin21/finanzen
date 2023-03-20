@@ -8,7 +8,7 @@ import gspread
 sa = gspread.service_account("service_account.json")
 sh = sa.open("wochenstunden")
 
-df = sh.worksheet("Tabelle1")
+df = sh.worksheet("2023")
 df = pd.DataFrame(df.get_all_records())
 
 df["Stunden"] = df["Stunden"].map(float)
