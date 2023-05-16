@@ -11,7 +11,7 @@ st.set_page_config(
     menu_items={}
 )
 
-st.title("Life 2.1 TEST")
+st.title("Life 2.1 TEST2")
 
 finanzen, wochenstunden, investment = st.tabs(["Finanzen", "Wochenstunden", "Investment"])
 
